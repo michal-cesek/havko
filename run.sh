@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -e
-export $(cat .env | xargs)
+set -a
+. ./.env
+set +a
 
 apt update
 apt install python-pip -y
