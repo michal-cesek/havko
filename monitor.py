@@ -1,30 +1,33 @@
 import requests
 import time
 import hashlib
+import sys
 import os
 from datetime import datetime
 from bs4 import BeautifulSoup
 from mailjet_rest import Client
 
-URL = os.environ['URL_TO_CHECK']
+URL = os.environ['HAVKO_URL_TO_CHECK']
 # URL = "http://127.0.0.1:7648/"
-
-WAIT = int(os.environ['WAIT'])
-start = datetime.utcnow()
-
+WAIT = int(os.environ['HAVKO_WAIT'])
 API_KEY = os.environ['MJ_APIKEY_PUBLIC']
 API_SECRET = os.environ['MJ_APIKEY_PRIVATE']
-RECEPIENT = os.environ['RECEPIENT']
+RECEPIENT = os.environ['HAVKO_RECEPIENT']
+USER_AGENT = os.environ['HAVKO_USER_AGENT']
+
 mailjet = Client(auth=(API_KEY, API_SECRET), version='v3')
 email = {
     'FromName': 'Havko script',
     'FromEmail': RECEPIENT,
     'Subject': 'Page {} has changed'.format(URL),
-    'Text-Part': 'Hello, the page {} has changed.( scirpt started on {} )'.format(URL, start),
+    'Text-Part': 'Hello, the page {} has changed.( scirpt started on {} )'.format(URL, datetime.utcnow()),
     'Recipients': [{'Email': RECEPIENT}]
 }
+test_email = email
+test_email['Subject'] = 'Just testing if script can send email.'
+
 headers = {
-    'User-Agent': os.environ['USER_AGENT']
+    'User-Agent': USER_AGENT
 }
 
 
@@ -40,7 +43,14 @@ def get_hash():
 
 
 print('Starting script ...')
-print('Recipeint of email notification: {}'.format(RECEPIENT))
+print('Recipeint of email notification: {}. Sending test email ...'.format(RECEPIENT))
+res = mailjet.send.create(test_email)
+if res.status_code == 200:
+    print('Test email sent successfully ({})'.format(datetime.utcnow()))
+else:
+    print('Email/email service is not set correctly')
+    sys.exit()
+
 initial_hash = get_hash()
 print('Initial hash set.')
 
@@ -55,6 +65,11 @@ while True:
     else:
         print('Hashes are diffrent, sending email ...')
         initial_hash = current_hash
-        mailjet.send.create(email)
-        print('Email sent ({})'.format(datetime.utcnow()))
+        res = mailjet.send.create(email)
+        if res.status_code == 200:
+            print('Notification email sent successfully ({})'.format(datetime.utcnow()))
+        else:
+            print('Notification email was not sent successfully ({})'.format(datetime.utcnow()))
+
         break
+
